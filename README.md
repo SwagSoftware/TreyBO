@@ -5,7 +5,7 @@
 ># You Need...
 ># TreyBO.
 
-![TreyBO Physics demo: a few hundred Treyarch logos falling and piling up](docs/media/treybo.gif)
+![TreyBO Physics demo: a few hundred Treyarch logos falling and piling up](treybo.gif)
 
 
 ## TreyBO
