@@ -20,7 +20,7 @@ You played the games; now play with their power!
 
 Level up your engine with the Unique and Exotic feeling of a mid-2000's Constraint solver.
 
-Code that once hand-written by someone at Treyarch, [meticulously decompiled by hand](https://github.com/swagsoftware/kisakblack), and then fed into AI for the ultimate experience.
+Code that once was hand-written by someone at Treyarch, [meticulously decompiled by hand](https://github.com/swagsoftware/kisakblack), and then fed into AI for the ultimate experience.
 
 Show your true Artisanship by abandoning practicality. 
 

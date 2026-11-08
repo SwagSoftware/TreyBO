@@ -1,0 +1,122 @@
+name: Build
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Static MSVC runtime: the demo then needs no VC++ redistributable, only a Vulkan-capable GPU driver.
+      - name: Configure
+        run: cmake -S . -B build -A x64 -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
+
+      - name: Build
+        run: cmake --build build --config Release --parallel
+
+      - name: Smoke test
+        run: build\Release\treybo_smoke.exe
+
+      - name: Package
+        shell: pwsh
+        run: |
+          $pkg = "TreyBO-demo-windows-x64"
+          New-Item -ItemType Directory -Force $pkg | Out-Null
+          Copy-Item build\demo\Release\treybo_demo.exe $pkg\
+          Copy-Item -Recurse build\demo\Release\assets $pkg\assets
+          Compress-Archive -Path "$pkg\*" -DestinationPath "$pkg.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TreyBO-demo-windows-x64
+          path: TreyBO-demo-windows-x64.zip
+
+  linux:
+    name: Linux x64 (best effort)
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      # Dev headers so the vendored SDL2 builds its X11/Wayland backends (linked statically, loaded at run time).
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev libxss-dev libxinerama-dev libxfixes-dev \
+            libwayland-dev libxkbcommon-dev wayland-protocols libegl-dev libdbus-1-dev libudev-dev
+
+      - name: Configure
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Smoke test
+        run: ./build/treybo_smoke
+
+      - name: Package
+        run: |
+          pkg=TreyBO-demo-linux-x64
+          mkdir -p $pkg
+          cp build/demo/treybo_demo $pkg/
+          cp -r build/demo/assets $pkg/assets
+          tar -czf $pkg.tar.gz $pkg
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: TreyBO-demo-linux-x64
+          path: TreyBO-demo-linux-x64.tar.gz
+
+  release:
+    name: Publish release
+    needs: [windows, linux]
+    # Linux is best effort: publish whenever Windows built, with whatever packages exist.
+    if: always() && needs.windows.result == 'success' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: TreyBO-demo-*
+          path: dist
+          merge-multiple: true
+
+      # Every push to master replaces the rolling "latest-build" release, so
+      # https://github.com/<owner>/<repo>/releases/latest/download/TreyBO-demo-windows-x64.zip always works.
+      - name: Rolling release (master)
+        if: github.ref == 'refs/heads/master'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release delete latest-build --yes --cleanup-tag || true
+          gh release create latest-build dist/* \
+            --target "$GITHUB_SHA" \
+            --title "TreyBO demo - latest build (${GITHUB_SHA::7})" \
+            --notes "Automatic build of master at ${GITHUB_SHA::7}. Download the zip for your platform, extract it and run treybo_demo. Needs a Vulkan-capable GPU driver." \
+            --latest
+
+      - name: Tagged release
+        if: startsWith(github.ref, 'refs/tags/v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "TreyBO $GITHUB_REF_NAME" \
+            --generate-notes \
+            --latest
