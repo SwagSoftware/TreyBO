@@ -1,19 +1,17 @@
 #pragma once
 
-// TreyBO-new header: the world-geometry boundary of TreyBO, gathered in one place.
+// The world-geometry boundary of the physics library, gathered in one place.
 //
-// It adds no mechanism. Retail tl/physics already reaches the world only through the abstract types below
-// (phys_broad_phase.h); BO1's game implemented them in src/physics (standard_query 0x83abe0,
-// gjk_physics_collision_visitor::query_create_prolog / _epilog 0x838b50 / 0x838fc0, dynamic_ent_aa,
-// destructible_ent_aa). This header documents that contract and includes everything a host needs to meet it.
+// It adds no mechanism: tl/physics reaches the world only through the abstract types below
+// (phys_broad_phase.h). This header documents that contract and includes everything a host needs to meet it.
 //
 // =============================================================================================================
-// 1. Set-up (BO1 Phys_Init 0x847310, in this order)
+// 1. Set-up (in this order)
 // =============================================================================================================
 //    phys_memory_manager_init(buffer, size);          // phys_mem.h
 //    phys_task_manager_init();                        // collision/phys_task_manager.h
 //    phys_sys::phys_init();                           // physics_system.h
-//    broad_phase_memory_info bpmi;                    // BO1: 2048 gjk caches, 2048 sap pairs, 35 surface types
+//    broad_phase_memory_info bpmi;                    // e.g. 2048 gjk caches, 2048 sap pairs, 35 surface types
 //    broad_phase_system_init(bpmi, should_collide);   // should_collide(a, b) filters object/object pairs (may be NULL)
 //    G_BPM->g_broad_phase_terrain_query_callback = &my_query;   // REQUIRED once any bpb is on the environment list
 //    surface_type_info_database_set(t1, t2, info);    // every surface-type pair the host's set_cpi_params reads
@@ -40,15 +38,15 @@
 //    intersects the moving info's m_env_collision_flags.
 //
 // =============================================================================================================
-// 3. How a world geom is returned (retail query_create_prolog / query_create_epilog)
+// 3. How a world geom is returned
 // =============================================================================================================
-//    a. Key:      bpei_database_id id(host_word1, host_word2);   // unique and stable per geom (BO1: entity, geom ptr)
+//    a. Key:      bpei_database_id id(host_word1, host_word2);   // unique and stable per geom (e.g. entity, geom ptr)
 //    b. Cache:    broad_phase_environment_info *bpei = G_BPM->g_bpei_database.get_bpei_mt(id);
 //                 if bpei->m_data: another job (or cluster) built it this pass
 //                   -> bpeqr->add((broad_phase_base *)bpei->m_data); done.
 //                 else bpei->m_mutex.Lock(); re-test m_data (unlock + add if set meanwhile).
 //    c. Geom:     a phys_gjk_geom (collision/phys_gjk.h) in its own local frame, alive until broad_phase_reset_buffer
-//                 (BO1 allocated them from per-job scratch). Its GJK cache id is bpei->m_gjk_geom_id (stable while the
+//                 (e.g. from per-job scratch). Its GJK cache id is bpei->m_gjk_geom_id (stable while the
 //                 geom is queried every pass, so warm starts survive between passes).
 //    d. Info:     broad_phase_info *bpi_env = allocate_bpi_env();           // phys_broad_phase_inline.h, lock-free
 //                 bpi_env->set(rb, rb_to_world, cg_to_world, cg_to_rb, geom, bpei->m_gjk_geom_id,
@@ -69,7 +67,7 @@
 // 4. The collision pass
 // =============================================================================================================
 //    physics_system::time_step calls the collision callback once per sub-step. The minimal callback is
-//    broad_phase_default_collision_callback below (BO1's Phys_CollisionCallback adds effects and debug drawing
+//    broad_phase_default_collision_callback below (a host callback may add effects and debug drawing
 //    between the two calls). broad_phase_reset_buffer frees every bpi_env, pair and wheel info of the pass, so
 //    host pointers into them die there. contact_point_infos and rigid_body_constraint_contacts are created on the
 //    calling thread (process_cpi); the manifold calls g_phys_set_cpi_params for each new contact.
@@ -102,10 +100,9 @@
 #include "tl/physics/include/collision/phys_contact_manifold.h"
 #include "tl/physics/include/collision/phys_task_manager.h"
 
-// TREYBO: the minimal collision callback (phys_sys::set_collision_callback). BO1's Phys_CollisionCallback 0x8528e0
-// runs these two calls with game effects in between.
+// The minimal collision callback (phys_sys::set_collision_callback).
 inline void broad_phase_default_collision_callback()
 {
-    broad_phase_process();
-    broad_phase_reset_buffer();
+	broad_phase_process();
+	broad_phase_reset_buffer();
 }

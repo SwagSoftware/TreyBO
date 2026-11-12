@@ -1,15 +1,10 @@
-// Retail: codsrc\tl\physics\include\rbc_defs\rbc_def_types.inc. The per-constraint-type list.
-//
-// SM3 ships this file pre-expanded inside physics_system (counters, create_rbc_X, destroy, destroy_all_rbc_X,
-// max/available/used slots per type). TREYBO: it is an X-macro list here; the includer defines
+// The per-constraint-type list. The includer defines
 //     RBC_DEF_TYPE(class_name, short_name)
 // and gets one expansion per type, e.g. create_##short_name / destroy_all_##short_name / m_list_##short_name.
 //
-// Order = BO1 physics_system free-list member order (IDB physics_system +0x9ac..+0x2e60). The first six match
-// SM3; BO1 inserts custom_orientation / custom_path before angular_actuator and appends upright (SM3 had 7 types).
-// Other BO1 orderings differ: rb_inplace_partition_node and the phys_sys::get_rbc_*_alloc_count functions
-// (0xa14290-0xa14320) run point, hinge, dist, ragdoll, wheel, angular_actuator, upright, custom_orientation,
-// custom_path, contact. Those are written out by hand.
+// Order = physics_system free-list member order. rb_inplace_partition_node and the
+// phys_sys::get_rbc_*_alloc_count functions use a different order (point, hinge, dist, ragdoll, wheel,
+// angular_actuator, upright, custom_orientation, custom_path, contact) and are written out by hand.
 //
 // No include guard: include once per expansion.
 

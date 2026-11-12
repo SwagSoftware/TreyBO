@@ -1,9 +1,5 @@
 #pragma once
 
-// Retail: codsrc\tl\physics\include\rbc_defs\rbc_def_base.h. Header only (no BO1 assert references it).
-// SM3 shape. BO1: outer_time is gone, the outer updates take a plain float
-// (e.g. rigid_body_constraint_distance::outer_prolog_update(float) 0xa17aa0).
-//
 // The constraint types are not virtual: the solver walks one list per type (rb_inplace_partition_node)
 // and calls each type's methods directly. These base versions are the defaults a type inherits.
 
@@ -16,20 +12,19 @@ class pulse_sum_constraint_solver;
 class rigid_body_constraint
 {
 public:
-    // TREYBO: public (SM3 protected + friend rbcint; BO1 has no rbcint symbols and the partition / solver
-    // code walks m_next directly).
-    rigid_body *b1;
-    rigid_body *b2;
-    rigid_body_constraint *m_next; // next constraint of the same type in the island
+	// Public: the partition / solver code walks m_next directly.
+	rigid_body * b1;
+	rigid_body * b2;
+	rigid_body_constraint * m_next; // next constraint of the same type in the island
 
-    rigid_body *get_b1() const { return b1; }
-    rigid_body *get_b2() const { return b2; }
+	rigid_body * get_b1() const { return b1; }
+	rigid_body * get_b2() const { return b2; }
 
-    void do_collision(const float) {}
-    void setup_constraint(pulse_sum_constraint_solver *, const float) { PHYS_ASSERT(0); }
-    void epilog_vel_constraint(const float) {}
+	void do_collision(const float) {}
+	void setup_constraint(pulse_sum_constraint_solver *, const float) { PHYS_ASSERT(0); }
+	void epilog_vel_constraint(const float) {}
 
-    void outer_prolog_update(const float) {}
-    void inner_update(const float) {}
-    void outer_epilog_update(const float) {}
+	void outer_prolog_update(const float) {}
+	void inner_update(const float) {}
+	void outer_epilog_update(const float) {}
 };
